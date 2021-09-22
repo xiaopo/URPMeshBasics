@@ -101,28 +101,82 @@ public class Cube : MonoBehaviour
         v = CreateTopFace(triangles,v,ring);
 
         //底面
+        v = CreateBottomFace(triangles, v, ring);
 
         mesh.triangles = triangles;
     }
     private int CreateTopFace(int[] triangles,int v,int ring)
     {
+        //第一排
+        int sIndex = ring * ySize;
+        int lxs = xSize - 1;
+        for(int i = 0;i<lxs;i++)
+        {
+            v = SetQuad(triangles, v, sIndex, sIndex + 1, sIndex + ring-1, sIndex + ring);
+            sIndex++;
+        }
+        v = SetQuad(triangles, v, sIndex, sIndex + 1, sIndex + ring - 1, sIndex + 2);
 
+
+        int vMin = ring * (ySize + 1) - 1;
+        int vMid = vMin + 1;
+        int vMax = sIndex + 2;
+        //其他排中间
+        for (int z = 1; z < zSize - 1; z++)
+        {
+            //left
+            v = SetQuad(triangles, v, vMin, vMid, vMin - 1, vMid + xSize - 1);
+
+            //middle
+            for (int x = 1; x < xSize-1; x++)
+            {
+                v = SetQuad(triangles, v, vMid, vMid + 1, vMid + xSize - 1, vMid + xSize);
+                vMid++;
+            }
+
+            //right
+            v = SetQuad(triangles, v, vMid, vMax, vMid + xSize - 1, vMax + 1);
+            vMid++;//在最后一个四边形指定后把 vMid 在移动一个位置
+
+
+            //vMin左边 vMax 右边
+            // -- 和 ++ 表示把他们向 Z 方向移动
+            vMin--; vMax++;
+        }
+
+        //最后一排
+        //left
+        int vTop = vMin - 2;
+        v = SetQuad(triangles, v, vMin, vMid, vMin - 1, vTop);
+        //middle
+        for (int x = 1; x < xSize - 1; x++)
+        {
+            v = SetQuad(triangles, v, vMid, vMid + 1, vTop, vTop - 1);
+            vMid++;
+            vTop--;
+        }
+        //right
+        v = SetQuad(triangles, v, vMid, vTop - 2, vTop, vTop - 1);
 
         return v;
     }
 
-    private int CreateBottomFace(int[] triangles, int v, int ring)
+    private int CreateBottomFace(int[] triangles, int t, int ring)
     {
+        int v = 1;
+        int vMid = vertices.Length - (xSize - 1) * (zSize - 1);//起点
+        t = SetQuad(triangles, t, ring - 1, vMid, 0, 1);
+        
 
-        return v;
+        return t;
     }
 
     private static int SetQuad(int[] triangles, int i, int v00, int v10, int v01, int v11)
     {
-        triangles[i] = v00;//左下角
-        triangles[i + 1] = triangles[i + 4] = v01;//左上角
-        triangles[i + 2] = triangles[i + 3] = v10;//右下角
-        triangles[i + 5] = v11;//右上角
+        triangles[i] = v00;
+        triangles[i + 1] = triangles[i + 4] = v01;
+        triangles[i + 2] = triangles[i + 3] = v10;
+        triangles[i + 5] = v11;
         return i + 6;
     }
  

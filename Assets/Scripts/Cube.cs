@@ -13,6 +13,10 @@ public class Cube : MonoBehaviour
 
     private void Update()
     {
+        if (xSize < 2) xSize = 2;
+        if (ySize < 2) ySize = 2;
+        if (zSize < 2) zSize = 2;
+
         if (mXSize != xSize || mYSize != ySize || mZSize != zSize)
         {
             mXSize = xSize;
@@ -108,7 +112,7 @@ public class Cube : MonoBehaviour
         v = CreateTopFace(triangles,v,ring);
 
         //底面
-        //v = CreateBottomFace(triangles, v, ring);
+        v = CreateBottomFace(triangles, v, ring);
 
         mesh.triangles = triangles;
     }
@@ -151,6 +155,7 @@ public class Cube : MonoBehaviour
             vMin--; vMax++;
         }
 
+        if (zSize <= 1) return v;//不存在最后一排
         //最后一排
         //left
         int vTop = vMin - 2;
@@ -167,6 +172,7 @@ public class Cube : MonoBehaviour
 
         return v;
     }
+
 
     private int CreateBottomFace(int[] triangles, int t, int ring)
     {
@@ -185,9 +191,9 @@ public class Cube : MonoBehaviour
         v += 2;
         vMid++;
 
-        for (int z = 2;z< zSize;z++)
+        for (int z = 2; z < zSize; z++)
         {
-            t = SetQuad(triangles, t, ring - z, vMid, ring - z+1, vMid - xSize +1);
+            t = SetQuad(triangles, t, ring - z, vMid, ring - z + 1, vMid - xSize + 1);
 
             for (int x = 1; x < xSize - 1; x++)
             {
@@ -200,14 +206,16 @@ public class Cube : MonoBehaviour
             vMid++;
         }
 
+        if (xSize <= 1) return t;
+        //最后一行
         int zMid = ring - zSize;
         int vvMind = vMid - xSize + 1;
-        t = SetQuad(triangles, t, zMid, zMid-1, zMid+1, vvMind);
+        t = SetQuad(triangles, t, zMid, zMid - 1, zMid + 1, vvMind);
 
-        for(int x = 1;x<xSize -1;x++)
+        for (int x = 1; x < xSize - 1; x++)
         {
             zMid--;
-            t = SetQuad(triangles, t, zMid, zMid - 1, vvMind, vvMind+1);
+            t = SetQuad(triangles, t, zMid, zMid - 1, vvMind, vvMind + 1);
             vvMind++;
         }
 

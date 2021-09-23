@@ -6,15 +6,22 @@ using UnityEngine;
 public class Cube : MonoBehaviour
 {
     public int xSize, ySize, zSize;
-
+    private int mXSize, mYSize,mZSize;
     private Mesh mesh;
     private Vector3[] vertices;
 
-    private void Awake()
-    {
-        Generate();
-    }
 
+    private void Update()
+    {
+        if (mXSize != xSize || mYSize != ySize || mZSize != zSize)
+        {
+            mXSize = xSize;
+            mYSize = ySize;
+            mZSize = zSize;
+
+            Generate();
+        }
+    }
     private void Generate()
     {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -101,7 +108,7 @@ public class Cube : MonoBehaviour
         v = CreateTopFace(triangles,v,ring);
 
         //µ×Ãæ
-        v = CreateBottomFace(triangles, v, ring);
+        //v = CreateBottomFace(triangles, v, ring);
 
         mesh.triangles = triangles;
     }
@@ -165,8 +172,47 @@ public class Cube : MonoBehaviour
     {
         int v = 1;
         int vMid = vertices.Length - (xSize - 1) * (zSize - 1);//Æðµã
+
         t = SetQuad(triangles, t, ring - 1, vMid, 0, 1);
-        
+        for (int x = 1; x < xSize - 1; x++)
+        {
+            t = SetQuad(triangles, t, vMid, vMid + 1, v, v + 1);
+            v++;
+            vMid++;
+        }
+
+        t = SetQuad(triangles, t, vMid, v + 2, v, v + 1);
+        v += 2;
+        vMid++;
+
+        for (int z = 2;z< zSize;z++)
+        {
+            t = SetQuad(triangles, t, ring - z, vMid, ring - z+1, vMid - xSize +1);
+
+            for (int x = 1; x < xSize - 1; x++)
+            {
+                t = SetQuad(triangles, t, vMid, vMid + 1, vMid - xSize + 1, vMid - xSize + 2);
+                vMid++;
+            }
+
+            t = SetQuad(triangles, t, vMid, v + 1, vMid - xSize + 1, v);
+            v += 1;
+            vMid++;
+        }
+
+        int zMid = ring - zSize;
+        int vvMind = vMid - xSize + 1;
+        t = SetQuad(triangles, t, zMid, zMid-1, zMid+1, vvMind);
+
+        for(int x = 1;x<xSize -1;x++)
+        {
+            zMid--;
+            t = SetQuad(triangles, t, zMid, zMid - 1, vvMind, vvMind+1);
+            vvMind++;
+        }
+
+        zMid--;
+        t = SetQuad(triangles, t, zMid, zMid - 1, vvMind, zMid - 2);
 
         return t;
     }

@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class Cube : MonoBehaviour
+public class RoundedCube : MonoBehaviour
 {
     public int xSize, ySize, zSize;
+    public int roundness;
+
     private int mXSize, mYSize,mZSize;
     private Mesh mesh;
     private Vector3[] vertices;
-
+    private Vector3[] normals;
 
     private void Update()
     {
@@ -45,23 +47,23 @@ public class Cube : MonoBehaviour
         //6个面内的点 (xy+xz+yz)*2
         int faceVertices = ((xSize - 1) * (ySize - 1) + (xSize - 1) * (zSize - 1) + (ySize - 1) * (zSize - 1)) * 2;
         vertices = new Vector3[cornerVertices + edgeVertices + faceVertices];
-
+        normals = new Vector3[vertices.Length];
         //顶点必须得有序不然在指定三角形的时候会出乱
 
         int v = 0;
         for (int y = 0; y <= ySize; y++)
         {
             for (int x = 0; x <= xSize; x++)
-                vertices[v++] = new Vector3(x, y, 0);
+                SetVertex(v++, x, y, 0);
 
             for (int z = 1; z <= zSize; z++)
-                vertices[v++] = new Vector3(xSize, y, z);
+                SetVertex(v++, xSize, y, z);
 
             for (int x = xSize - 1; x >= 0; x--)
-                vertices[v++] = new Vector3(x, y, zSize);
+                SetVertex(v++, x, y, zSize);
 
             for (int z = zSize - 1; z > 0; z--)
-                vertices[v++] = new Vector3(0, y, z);
+                SetVertex(v++, 0, y, z);
 
         }
 
@@ -69,53 +71,109 @@ public class Cube : MonoBehaviour
         for (int z = 1; z < zSize; z++)
         {
             for (int x = 1; x < xSize; x++)
-                vertices[v++] = new Vector3(x, ySize, z);
+                SetVertex(v++, x, ySize, z);
         }
 
         //bottom
         for (int z = 1; z < zSize; z++)
         {
             for (int x = 1; x < xSize; x++)
-                vertices[v++] = new Vector3(x, 0, z);
+                SetVertex(v++, x, 0, z);
+
         }
 
         mesh.vertices = vertices;
+        mesh.normals = normals;
     }
+    private void SetVertex(int i, int x, int y, int z)
+    {
+        Vector3 inner = vertices[i] = new Vector3(x, y, z);
 
+        //限制 x,y,z 在边界偏移内
+        if (x < roundness) inner.x = roundness;
+        else if (x > xSize - roundness)  inner.x = xSize - roundness;
+
+        if (y < roundness)  inner.y = roundness;
+        else if (y > ySize - roundness)  inner.y = ySize - roundness;
+
+        if (z < roundness)  inner.z = roundness;
+        else if (z > zSize - roundness)  inner.z = zSize - roundness;
+
+        normals[i] = (vertices[i] - inner).normalized;
+
+        //沿法线方向膨胀
+        vertices[i] = inner + normals[i] * roundness;
+    }
     private void CreateTriangles()
     {
-        //6个四边形面
-        int quads = (xSize * ySize + xSize * zSize + ySize * zSize) * 2;
+        //6个大面
+        //int quads = (xSize * ySize + xSize * zSize + ySize * zSize) * 2;
         //每个四边形面有6个index
-        int[] triangles = new int[quads * 6];
-
-        //画三角形时顶上那个index
-        //二维的grid中该index和 i 差距一个xSize
-        //三维中根据顶点的排序我们需要加上一圈的差距
+        //int[] triangles = new int[quads * 6];
+        int[] trianglesZ = new int[(xSize * ySize) * 2 * 6];
+        int[] trianglesX = new int[(ySize * zSize) * 2 * 6];
+        int[] trianglesY = new int[(xSize * zSize) * 2 * 6];
         int ring = (xSize + zSize) * 2;
-        int v = 0;
-        for(int y = 0;y<ySize;y++)
+        int tZ = 0, tX = 0, tY = 0, v = 0;
+        for (int y = 0; y < ySize; y++, v++)
         {
-            for (int i = 0; i < ring - 1; i++)
-            {
-                int t = y * ring + i;
-                v = SetQuad(triangles, v, t, t + 1, t + ring, t + ring + 1);
-            }
+            for (int q = 0; q < xSize; q++, v++)
+                tZ = SetQuad(trianglesZ, tZ, v, v + 1, v + ring, v + ring + 1);
 
-            //一圈中最后一个四边形得特殊处理
-            int endRing = (y + 1) * ring;
-            int lastleftBottom = endRing - 1;
-            v = SetQuad(triangles, v, lastleftBottom, 0, lastleftBottom + ring, endRing);
+            for (int q = 0; q < zSize; q++, v++)
+                tX = SetQuad(trianglesX, tX, v, v + 1, v + ring, v + ring + 1);
+
+            for (int q = 0; q < xSize; q++, v++)
+                tZ = SetQuad(trianglesZ, tZ, v, v + 1, v + ring, v + ring + 1);
+
+            for (int q = 0; q < zSize - 1; q++, v++)
+                tX = SetQuad(trianglesX, tX, v, v + 1, v + ring, v + ring + 1);
+
+            tX = SetQuad(trianglesX, tX, v, v - ring + 1, v + ring, v + 1);
         }
 
-        //顶面
-        v = CreateTopFace(triangles,v,ring);
+        tY = CreateTopFace(trianglesY, tY, ring);
+        tY = CreateBottomFace(trianglesY, tY, ring);
 
-        //底面
-        v = CreateBottomFace(triangles, v, ring);
-
-        mesh.triangles = triangles;
+        mesh.subMeshCount = 3;
+        mesh.SetTriangles(trianglesZ, 0);
+        mesh.SetTriangles(trianglesX, 1);
+        mesh.SetTriangles(trianglesY, 2);
     }
+    //private void CreateTriangles()
+    //{
+    //    //6个大面
+    //    int quads = (xSize * ySize + xSize * zSize + ySize * zSize) * 2;
+    //    //每个四边形面有6个index
+    //    int[] triangles = new int[quads * 6];
+
+    //    //画三角形时顶上那个index
+    //    //二维的grid中该index和 i 差距一个xSize
+    //    //三维中根据顶点的排序我们需要加上一圈的差距
+    //    int ring = (xSize + zSize) * 2;
+    //    int v = 0;
+    //    for(int y = 0;y<ySize;y++)
+    //    {
+    //        for (int i = 0; i < ring - 1; i++)
+    //        {
+    //            int t = y * ring + i;
+    //            v = SetQuad(triangles, v, t, t + 1, t + ring, t + ring + 1);
+    //        }
+
+    //        //一圈中最后一个四边形得特殊处理
+    //        int endRing = (y + 1) * ring;
+    //        int lastleftBottom = endRing - 1;
+    //        v = SetQuad(triangles, v, lastleftBottom, ring*y, lastleftBottom + ring, endRing);
+    //    }
+
+    //    //顶面
+    //    v = CreateTopFace(triangles,v,ring);
+
+    //    //底面
+    //    v = CreateBottomFace(triangles, v, ring);
+
+    //    mesh.triangles = triangles;
+    //}
     private int CreateTopFace(int[] triangles,int v,int ring)
     {
         //第一排
@@ -240,10 +298,13 @@ public class Cube : MonoBehaviour
         {
             return;
         }
-        Gizmos.color = Color.black;
+       
         for (int i = 0; i < vertices.Length; i++)
         {
+            Gizmos.color = Color.black;
             Gizmos.DrawSphere(vertices[i], 0.1f);
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(vertices[i], normals[i]);
         }
     }
 }

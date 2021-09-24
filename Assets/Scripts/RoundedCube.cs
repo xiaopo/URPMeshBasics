@@ -8,22 +8,23 @@ public class RoundedCube : MonoBehaviour
     public int xSize, ySize, zSize;
     public int roundness;
 
-    private int mXSize, mYSize,mZSize;
+    private int mXSize, mYSize,mZSize,mroundness;
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
-
+    private Color32[] cubeUV;
     private void Update()
     {
         if (xSize < 2) xSize = 2;
         if (ySize < 2) ySize = 2;
         if (zSize < 2) zSize = 2;
 
-        if (mXSize != xSize || mYSize != ySize || mZSize != zSize)
+        if (mXSize != xSize || mYSize != ySize || mZSize != zSize || mroundness != roundness)
         {
             mXSize = xSize;
             mYSize = ySize;
             mZSize = zSize;
+            mroundness = roundness;
 
             Generate();
         }
@@ -48,6 +49,7 @@ public class RoundedCube : MonoBehaviour
         int faceVertices = ((xSize - 1) * (ySize - 1) + (xSize - 1) * (zSize - 1) + (ySize - 1) * (zSize - 1)) * 2;
         vertices = new Vector3[cornerVertices + edgeVertices + faceVertices];
         normals = new Vector3[vertices.Length];
+        cubeUV = new Color32[vertices.Length];
         //顶点必须得有序不然在指定三角形的时候会出乱
 
         int v = 0;
@@ -84,6 +86,7 @@ public class RoundedCube : MonoBehaviour
 
         mesh.vertices = vertices;
         mesh.normals = normals;
+        mesh.colors32 = cubeUV;
     }
     private void SetVertex(int i, int x, int y, int z)
     {
@@ -103,6 +106,8 @@ public class RoundedCube : MonoBehaviour
 
         //沿法线方向膨胀
         vertices[i] = inner + normals[i] * roundness;
+
+        cubeUV[i] = new Color32((byte)x, (byte)y, (byte)z, 0);
     }
     private void CreateTriangles()
     {

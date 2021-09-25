@@ -14,6 +14,7 @@ public class CubeSphere : MonoBehaviour
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
+    private Color32[] cubeUV;
 
     private void Update()
     {
@@ -52,6 +53,7 @@ public class CubeSphere : MonoBehaviour
         int faceVertices = ((xSize - 1) * (ySize - 1) + (xSize - 1) * (zSize - 1) + (ySize - 1) * (zSize - 1)) * 2;
         vertices = new Vector3[cornerVertices + edgeVertices + faceVertices];
         normals = new Vector3[vertices.Length];
+        cubeUV = new Color32[vertices.Length];
         //顶点必须得有序不然在指定三角形的时候会出乱
 
         int v = 0;
@@ -88,14 +90,25 @@ public class CubeSphere : MonoBehaviour
 
         mesh.vertices = vertices;
         mesh.normals = normals;
+        mesh.colors32 = cubeUV;
     }
 
     private void SetVertex(int i, int x, int y, int z)
     {
         //先获得在圆心的方向，然后在乘以半径
         Vector3 v = new Vector3(x, y, z) * 2f / gridSize - Vector3.one;
+        float x2 = v.x * v.x;
+        float y2 = v.y * v.y;
+        float z2 = v.z * v.z;
+        Vector3 s;
+        s.x = v.x * Mathf.Sqrt(1f - y2 / 2f - z2 / 2f + y2 * z2 / 3f);
+        s.y = v.y * Mathf.Sqrt(1f - x2 / 2f - z2 / 2f + x2 * z2 / 3f);
+        s.z = v.z * Mathf.Sqrt(1f - x2 / 2f - y2 / 2f + x2 * y2 / 3f);
+       // normals[i] = s;
         normals[i] = v.normalized;
         vertices[i] = normals[i] * radius;
+
+        cubeUV[i] = new Color32((byte)x, (byte)y, (byte)z, 0);
     }
     private void CreateTriangles()
     {
@@ -283,20 +296,20 @@ public class CubeSphere : MonoBehaviour
         triangles[i + 5] = v11;
         return i + 6;
     }
- 
-    //private void OnDrawGizmos()
-    //{
-    //    if (vertices == null)
-    //    {
-    //        return;
-    //    }
-       
-    //    for (int i = 0; i < vertices.Length; i++)
-    //    {
-    //        Gizmos.color = Color.black;
-    //        Gizmos.DrawSphere(vertices[i], 0.1f);
-    //        Gizmos.color = Color.yellow;
-    //        Gizmos.DrawRay(vertices[i], normals[i]);
-    //    }
-    //}
+
+    private void OnDrawGizmos()
+    {
+        if (vertices == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            Gizmos.color = Color.black;
+            Gizmos.DrawSphere(vertices[i], 0.1f);
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(vertices[i], normals[i]);
+        }
+    }
 }

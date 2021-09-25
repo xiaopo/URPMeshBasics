@@ -41,7 +41,6 @@ Shader "Unlit/CubeGrid"
 
              UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
              UNITY_DEFINE_INSTANCED_PROP(float4, _MainColor)
-             UNITY_DEFINE_INSTANCED_PROP(float4, _MainTex_ST)
 
              UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
@@ -60,6 +59,7 @@ Shader "Unlit/CubeGrid"
 
                  UNITY_VERTEX_INPUT_INSTANCE_ID
              };
+
 
              v2f Vertex(a2v input)
              {

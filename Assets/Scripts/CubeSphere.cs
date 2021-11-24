@@ -3,28 +3,32 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class RoundedCube : MonoBehaviour
+public class CubeSphere : MonoBehaviour
 {
     public int xSize, ySize, zSize;
-    public int roundness;
+    public int gridSize;
+    public float radius = 1;
 
-    private int mXSize, mYSize,mZSize,mroundness;
+    private int mXSize, mYSize,mZSize,mgridSize;
+    private float mRadius;
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
     private Color32[] cubeUV;
+
     private void Update()
     {
         if (xSize < 2) xSize = 2;
         if (ySize < 2) ySize = 2;
         if (zSize < 2) zSize = 2;
 
-        if (mXSize != xSize || mYSize != ySize || mZSize != zSize || mroundness != roundness)
+        if (mXSize != xSize || mYSize != ySize || mZSize != zSize || mgridSize != gridSize || mRadius != radius)
         {
             mXSize = xSize;
             mYSize = ySize;
             mZSize = zSize;
-            mroundness = roundness;
+            mgridSize = gridSize;
+            mRadius = radius;
 
             Generate();
         }
@@ -32,7 +36,7 @@ public class RoundedCube : MonoBehaviour
     private void Generate()
     {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
-        mesh.name = "Procedural Cube";
+        mesh.name = "Procedural Sphere";
 
         CreateVertices();
 
@@ -88,24 +92,21 @@ public class RoundedCube : MonoBehaviour
         mesh.normals = normals;
         mesh.colors32 = cubeUV;
     }
+
     private void SetVertex(int i, int x, int y, int z)
     {
-        Vector3 inner = vertices[i] = new Vector3(x, y, z);
-
-        //限制 x,y,z 在边界偏移内
-        if (x < roundness) inner.x = roundness;
-        else if (x > xSize - roundness)  inner.x = xSize - roundness;
-
-        if (y < roundness)  inner.y = roundness;
-        else if (y > ySize - roundness)  inner.y = ySize - roundness;
-
-        if (z < roundness)  inner.z = roundness;
-        else if (z > zSize - roundness)  inner.z = zSize - roundness;
-
-        normals[i] = (vertices[i] - inner).normalized;
-
-        //沿法线方向膨胀
-        vertices[i] = inner + normals[i] * roundness;
+        //先获得在圆心的方向，然后在乘以半径
+        Vector3 v = new Vector3(x, y, z) * 2f / gridSize - Vector3.one;
+        float x2 = v.x * v.x;
+        float y2 = v.y * v.y;
+        float z2 = v.z * v.z;
+        Vector3 s;
+        s.x = v.x * Mathf.Sqrt(1f - y2 / 2f - z2 / 2f + y2 * z2 / 3f);
+        s.y = v.y * Mathf.Sqrt(1f - x2 / 2f - z2 / 2f + x2 * z2 / 3f);
+        s.z = v.z * Mathf.Sqrt(1f - x2 / 2f - y2 / 2f + x2 * y2 / 3f);
+       // normals[i] = s;
+        normals[i] = v.normalized;
+        vertices[i] = normals[i] * radius;
 
         cubeUV[i] = new Color32((byte)x, (byte)y, (byte)z, 0);
     }
@@ -236,7 +237,6 @@ public class RoundedCube : MonoBehaviour
         return v;
     }
 
-
     private int CreateBottomFace(int[] triangles, int t, int ring)
     {
         int v = 1;
@@ -296,14 +296,14 @@ public class RoundedCube : MonoBehaviour
         triangles[i + 5] = v11;
         return i + 6;
     }
- 
+
     private void OnDrawGizmos()
     {
         if (vertices == null)
         {
             return;
         }
-       
+
         for (int i = 0; i < vertices.Length; i++)
         {
             Gizmos.color = Color.black;
